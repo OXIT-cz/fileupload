@@ -17,6 +17,7 @@ use Zet\FileUpload\Exception\InvalidValueException;
 use Zet\FileUpload\Model\BaseUploadModel;
 use Zet\FileUpload\Model\DefaultFile;
 use Zet\FileUpload\Model\IUploadModel;
+use Zet\FileUpload\Template\IJavascriptBuilder;
 
 /**
  * Class FileUploadControl
@@ -66,6 +67,9 @@ class FileUploadControl extends UploadControl
 
 	/** @var class-string<IUploadController>|null */
 	private $uploadController;
+
+	/** @var class-string<IJavascriptBuilder>|null */
+	private $javascriptBuilder;
 
 	/** @var class-string<IUploadModel>|null */
 	private $uploadModel;
@@ -529,6 +533,24 @@ class FileUploadControl extends UploadControl
 	public function getUploadController()
 	{
 		return $this->uploadController;
+	}
+
+	/**
+	 * @param class-string<IUploadController> $javascriptBuilder
+	 */
+	public function setJavascriptBuilder(string $javascriptBuilder): self
+	{
+		$this->javascriptBuilder = new $javascriptBuilder(
+			$this->getUploadController()->getRenderer(),
+			$this->getUploadController()
+		);
+
+		return $this;
+	}
+
+	public function getJavascriptBuilder()
+	{
+		return $this->javascriptBuilder;
 	}
 
 	// --------------------------------------------------------------------

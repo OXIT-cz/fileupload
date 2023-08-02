@@ -7,7 +7,8 @@ use Nette\Localization\ITranslator;
 use Nette\SmartObject;
 use Nette\Utils\Html;
 use Tracy\Debugger;
-use Zet\FileUpload\Model\UploadController;
+use Zet\FileUpload\Controller\IUploadController;
+use Zet\FileUpload\Controller\UploadController;
 use Zet\FileUpload\Template\Renderer\BaseRenderer;
 
 /**
@@ -31,7 +32,7 @@ class JavascriptBuilder implements IJavascriptBuilder
 	private $renderer;
 
 	/**
-	 * @var UploadController
+	 * @var UploadController;
 	 */
 	private $controller;
 
@@ -41,11 +42,11 @@ class JavascriptBuilder implements IJavascriptBuilder
 	 * JavascriptBuilder constructor.
 	 *
 	 * @param BaseRenderer     $renderer
-	 * @param UploadController $controller
+	 * @param IUploadController $controller
 	 */
 	public function __construct(
 		BaseRenderer $renderer,
-		UploadController $controller
+		IUploadController $controller
 	)
 	{
 		$this->renderer = $renderer;
@@ -55,7 +56,7 @@ class JavascriptBuilder implements IJavascriptBuilder
 		$this->setTemplateFile();
 	}
 
-	public function setTemplateFile(?string $filePath = null): JavascriptBuilder
+	public function setTemplateFile(?string $filePath = null): self
 	{
 		$this->template->setFile($filePath ?: $this->templateFile);
 

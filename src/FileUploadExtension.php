@@ -114,6 +114,7 @@ final class FileUploadExtension extends CompilerExtension
 				'stopped' => Expect::string('File upload interrupted.'),
 			]),
 			'uploadSettings' => Expect::array(),
+			'debug' => Expect::bool(false)
 		]);
 	}
 

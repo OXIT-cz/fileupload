@@ -143,6 +143,7 @@ class UploadController extends Control implements IUploadController
 	 */
 	public function handleUpload(): void
 	{
+		$debug = $this->uploadControl->getDebug();
 		$files = $this->request->getFiles();
 		$token = $this->request->getPost('token');
 		$params = json_decode($this->request->getPost('params'), true);
@@ -176,20 +177,20 @@ class UploadController extends Control implements IUploadController
 			$this->presenter->sendResponse(new JsonResponse([
 				'id' => $this->request->getPost('id'),
 				'error' => 100,
-				'errorMessage' => $e->getMessage(),
+				'errorMessage' => $debug ? $e->getMessage() : $this->uploadControl->translate('Invalid file'),
 			]));
 
 		} catch (Throwable $e) {
 			$this->presenter->sendResponse(new JsonResponse([
 				'id' => $this->request->getPost('id'),
 				'error' => 99,
-				'errorMessage' => $e->getMessage(),
+				'errorMessage' => $debug ? $e->getMessage() : $this->uploadControl->translate('Server error'),
 			]));
 		}
 
 		$this->presenter->sendResponse(new JsonResponse([
 			'id' => $this->request->getPost('id'),
-			'error' => $file->getError(),
+			'error' => 0,
 		]));
 	}
 

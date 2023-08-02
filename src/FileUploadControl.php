@@ -57,6 +57,9 @@ class FileUploadControl extends UploadControl
 	/** @var Cache */
 	private $cache;
 
+	/** @var bool */
+	private $debug;
+
 	/** @var int */
 	private $maxFiles;
 
@@ -67,6 +70,9 @@ class FileUploadControl extends UploadControl
 	private $fileSizeString;
 
 	/** @var class-string<IUploadController>|null */
+	private $uploadControllerClass;
+
+	/** @var IUploadController|null */
 	private $uploadController;
 
 	/** @var class-string<IJavascriptBuilder>|null */
@@ -182,12 +188,15 @@ class FileUploadControl extends UploadControl
 
 			/** @var FileUploadControl $component */
 			$component = new $class($name, $maxFiles, $maxFileSize);
+
 			$component->setUploadController($configuration['uploadController']);
 			$component->setContainer($systemContainer);
+
 			$component->setUploadModel($configuration['uploadModel']);
 			$component->setJavascriptBuilder($configuration['jsBuilder']);
 			$component->setFileFilter($configuration['fileFilter']);
 			$component->setRenderer($configuration['renderer']);
+			$component->setDebug($configuration['debug']);
 
 			if ($configuration['translator'] === null) {
 				$translator = $systemContainer->getByType(Translator::class, false);
@@ -281,6 +290,18 @@ class FileUploadControl extends UploadControl
 	public function getContainer(): Container
 	{
 		return $this->container;
+	}
+
+	public function setDebug(bool $debug): self
+	{
+		$this->debug = $debug;
+
+		return $this;
+	}
+
+	public function getDebug(): bool
+	{
+		return $this->debug;
 	}
 
 	/**
@@ -524,24 +545,39 @@ class FileUploadControl extends UploadControl
 	 */
 	public function setUploadController(string $uploadController): self
 	{
-		$this->uploadController = $uploadController;
-
-		$controller = $this->uploadController;
-		$this->uploadController = new $controller($this);
-		$this->monitorController($this->uploadController);
+		$this->uploadControllerClass = $uploadController;
 
 		return $this;
 	}
 
+	/**
+	 * todo: wiring?
+	 */
 	public function getUploadController()
 	{
-		if($this->uploadController instanceof IUploadController) {
-			return $this->uploadController;
+		if(is_null($this->uploadControllerClass)) {
+			$defaultController = new UploadController($this);
+			$this->monitorController($defaultController);
+
+			return $defaultController; //monitor
 		}
 
-		throw new InvalidStateException(
-			'The passed controller is not an instance of \\Zet\\FileUpload\\Controller\\IUploadController.'
-		);
+		if(!$this->uploadController) {
+			$controller = $this->uploadControllerClass;
+			$controller = new $controller($this);
+
+			if($controller instanceof IUploadController) {
+				$this->uploadController = new $controller($this);
+
+				$this->monitorController($this->uploadController);
+			} else {
+				throw new InvalidStateException(
+					'The passed controller is not an instance of \\Zet\\FileUpload\\Controller\\IUploadController.'
+				);
+			}
+		}
+
+		return $this->uploadController;
 	}
 
 	protected function monitorController(IUploadController $controller)

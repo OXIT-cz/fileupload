@@ -13,6 +13,7 @@ use Nette\Localization\Translator;
 use Nette\Utils\Html;
 use stdClass;
 use Zet\FileUpload\Controller\IUploadController;
+use Zet\FileUpload\Controller\UploadController;
 use Zet\FileUpload\Exception\InvalidValueException;
 use Zet\FileUpload\Model\BaseUploadModel;
 use Zet\FileUpload\Model\DefaultFile;
@@ -181,9 +182,10 @@ class FileUploadControl extends UploadControl
 
 			/** @var FileUploadControl $component */
 			$component = new $class($name, $maxFiles, $maxFileSize);
-			$component->setContainer($systemContainer);
 			$component->setUploadController($configuration['uploadController']);
+			$component->setContainer($systemContainer);
 			$component->setUploadModel($configuration['uploadModel']);
+			$component->setJavascriptBuilder($configuration['jsBuilder']);
 			$component->setFileFilter($configuration['fileFilter']);
 			$component->setRenderer($configuration['renderer']);
 
@@ -270,7 +272,7 @@ class FileUploadControl extends UploadControl
 		/** @noinspection PhpParamsInspection */
 		$this->cache = new Cache($this->container->getByType('Nette\Caching\IStorage'));
 		/** @noinspection PhpParamsInspection */
-		$this->controller->setRequest($container->getByType('\Nette\Http\Request'));
+		$this->getUploadController()->setRequest($container->getByType('\Nette\Http\Request'));
 	}
 
 	/**
@@ -517,22 +519,39 @@ class FileUploadControl extends UploadControl
 	}
 
 	/**
+	 * Sorry (upgrade)
 	 * @param class-string<IUploadController> $uploadController
 	 */
 	public function setUploadController(string $uploadController): self
 	{
-		$this->uploadController = new $uploadController($this);
+		$this->uploadController = $uploadController;
 
-		$this->monitor(Form::class, function (Form $form): void {
-			$form->addComponent($this->uploadController, 'uploadController' . ucfirst($this->name));
-		});
+		$controller = $this->uploadController;
+		$this->uploadController = new $controller($this);
+		$this->monitorController($this->uploadController);
 
 		return $this;
 	}
 
 	public function getUploadController()
 	{
-		return $this->uploadController;
+		if($this->uploadController instanceof IUploadController) {
+			return $this->uploadController;
+		}
+
+		throw new InvalidStateException(
+			'The passed controller is not an instance of \\Zet\\FileUpload\\Controller\\IUploadController.'
+		);
+	}
+
+	protected function monitorController(IUploadController $controller)
+	{
+		$this->monitor(Form::class, function (Form $form) use ($controller): void {
+//			if($form->components) {
+//				$form->removeComponent($controller);
+				$form->addComponent($controller, 'uploadController' . ucfirst($this->name));
+//			}
+		});
 	}
 
 	/**
@@ -540,10 +559,7 @@ class FileUploadControl extends UploadControl
 	 */
 	public function setJavascriptBuilder(string $javascriptBuilder): self
 	{
-		$this->javascriptBuilder = new $javascriptBuilder(
-			$this->getUploadController()->getRenderer(),
-			$this->getUploadController()
-		);
+		$this->javascriptBuilder = $javascriptBuilder;
 
 		return $this;
 	}
@@ -585,8 +601,8 @@ class FileUploadControl extends UploadControl
 		$token->addAttributes(['name' => $this->getHtmlName() . '-token']);
 
 		$container->addHtml($token);
-		$container->addHtml($this->controller->getJavaScriptTemplate());
-		$container->addHtml($this->controller->getControlTemplate());
+		$container->addHtml($this->getUploadController()->getJavaScriptTemplate());
+		$container->addHtml($this->getUploadController()->getControlTemplate());
 
 		return $container;
 	}

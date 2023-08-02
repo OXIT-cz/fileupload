@@ -16,6 +16,7 @@ use Zet\FileUpload\Controller\IUploadController;
 use Zet\FileUpload\Exception\InvalidFileException;
 use Zet\FileUpload\FileUploadControl;
 use Zet\FileUpload\Filter\IMimeTypeFilter;
+use Zet\FileUpload\Template\IJavascriptBuilder;
 use Zet\FileUpload\Template\JavascriptBuilder;
 use Zet\FileUpload\Template\Renderer\BaseRenderer;
 
@@ -27,6 +28,10 @@ use Zet\FileUpload\Template\Renderer\BaseRenderer;
  */
 class UploadController extends Control implements IUploadController
 {
+	/**
+	 * @var mixed|\Zet\FileUpload\Template\IJavascriptBuilder
+	 */
+	private $javascriptBuilder;
 
 	/** @var FileUploadControl */
 	private $uploadControl;
@@ -94,15 +99,31 @@ class UploadController extends Control implements IUploadController
 		return $this->renderer;
 	}
 
+	public function getJavascriptBuilder()
+	{
+		if ($this->javascriptBuilder === null) {
+			$builder = $this->uploadControl->getJavascriptBuilder();
+
+			$this->javascriptBuilder = new $builder(
+				$this->getRenderer(), $this
+			);
+
+			if (!($this->javascriptBuilder instanceof IJavascriptBuilder)) {
+				throw new InvalidStateException(
+					'The renderer must be an instance of the class `\\Zet\\FileUpload\\Template\\IJavascriptBuilder`.'
+				);
+			}
+		}
+
+		return $this->javascriptBuilder;
+	}
+
 	/**
 	 * Vytvoření šablony s JavaScriptem pro FileUpload.
 	 */
 	public function getJavaScriptTemplate(): string
 	{
-		$builder = new JavascriptBuilder(
-			$this->getRenderer(),
-			$this
-		);
+		$builder = $this->getJavascriptBuilder();
 
 		return $builder->getJsTemplate();
 	}

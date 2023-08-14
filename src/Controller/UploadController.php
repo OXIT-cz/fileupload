@@ -174,10 +174,13 @@ class UploadController extends Control implements IUploadController
 				$cache->save($this->uploadControl->getTokenizedCacheName($token), $cacheFiles);
 			}
 		} catch (InvalidFileException $e) {
+			/*
+			 * Returns allowed file ext.
+			 */
 			$this->presenter->sendResponse(new JsonResponse([
 				'id' => $this->request->getPost('id'),
 				'error' => 100,
-				'errorMessage' => $debug ? $e->getMessage() : $this->uploadControl->translate('Invalid file'),
+				'errorMessage' => $e->getMessage(),
 			]));
 
 		} catch (Throwable $e) {

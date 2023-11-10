@@ -91,7 +91,7 @@ final class FileUploadExtension extends CompilerExtension
 
 	public function afterCompile(ClassType $class): void
 	{
-		$init = $class->methods['initialize'];
+		$init = $class->getMethod('initialize');
 
 		$init->addBody('\Zet\FileUpload\FileUploadControl::register($this->getService(?), ?);', [
 			$this->getContainerBuilder()->getByType(Container::class),

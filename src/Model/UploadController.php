@@ -123,7 +123,11 @@ class UploadController extends Control
 	{
 		$files = $this->request->getFiles();
 		$token = $this->request->getPost('token');
-		$params = json_decode($this->request->getPost('params'), true);
+		if ($httpDataParams = $this->request->getPost('params')) {
+			$params = json_decode($httpDataParams, true);
+		} else {
+			$params = [];
+		}
 
 		/** @var FileUpload $file */
 		$file = $files[$this->uploadControl->getHtmlName()];

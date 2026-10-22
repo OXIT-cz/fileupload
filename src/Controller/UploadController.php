@@ -1,6 +1,6 @@
 <?php declare(strict_types = 1);
 
-namespace Zet\FileUpload\Model;
+namespace Zet\FileUpload\Controller;
 
 use Nette\Application\AbortException;
 use Nette\Application\Responses\JsonResponse;
@@ -12,9 +12,11 @@ use Nette\InvalidStateException;
 use Nette\UnexpectedValueException;
 use Nette\Utils\Html;
 use Throwable;
+use Zet\FileUpload\Controller\IUploadController;
 use Zet\FileUpload\Exception\InvalidFileException;
 use Zet\FileUpload\FileUploadControl;
 use Zet\FileUpload\Filter\IMimeTypeFilter;
+use Zet\FileUpload\Template\IJavascriptBuilder;
 use Zet\FileUpload\Template\JavascriptBuilder;
 use Zet\FileUpload\Template\Renderer\BaseRenderer;
 
@@ -24,8 +26,12 @@ use Zet\FileUpload\Template\Renderer\BaseRenderer;
  * @property Template $template
  * @author  Zechy <email@zechy.cz>
  */
-class UploadController extends Control
+class UploadController extends Control implements IUploadController
 {
+	/**
+	 * @var mixed|\Zet\FileUpload\Template\IJavascriptBuilder
+	 */
+	private $javascriptBuilder;
 
 	/** @var FileUploadControl */
 	private $uploadControl;
@@ -93,15 +99,31 @@ class UploadController extends Control
 		return $this->renderer;
 	}
 
+	public function getJavascriptBuilder()
+	{
+		if ($this->javascriptBuilder === null) {
+			$builder = $this->uploadControl->getJavascriptBuilder();
+
+			$this->javascriptBuilder = new $builder(
+				$this->getRenderer(), $this
+			);
+
+			if (!($this->javascriptBuilder instanceof IJavascriptBuilder)) {
+				throw new InvalidStateException(
+					'The renderer must be an instance of the class `\\Zet\\FileUpload\\Template\\IJavascriptBuilder`.'
+				);
+			}
+		}
+
+		return $this->javascriptBuilder;
+	}
+
 	/**
 	 * Vytvoření šablony s JavaScriptem pro FileUpload.
 	 */
 	public function getJavaScriptTemplate(): string
 	{
-		$builder = new JavascriptBuilder(
-			$this->getRenderer(),
-			$this
-		);
+		$builder = $this->getJavascriptBuilder();
 
 		return $builder->getJsTemplate();
 	}
@@ -121,6 +143,7 @@ class UploadController extends Control
 	 */
 	public function handleUpload(): void
 	{
+		$debug = $this->uploadControl->getDebug();
 		$files = $this->request->getFiles();
 		$token = $this->request->getPost('token');
 		$params = json_decode($this->request->getPost('params'), true);
@@ -151,6 +174,9 @@ class UploadController extends Control
 				$cache->save($this->uploadControl->getTokenizedCacheName($token), $cacheFiles);
 			}
 		} catch (InvalidFileException $e) {
+			/*
+			 * Returns allowed file ext.
+			 */
 			$this->presenter->sendResponse(new JsonResponse([
 				'id' => $this->request->getPost('id'),
 				'error' => 100,
@@ -161,13 +187,13 @@ class UploadController extends Control
 			$this->presenter->sendResponse(new JsonResponse([
 				'id' => $this->request->getPost('id'),
 				'error' => 99,
-				'errorMessage' => $e->getMessage(),
+				'errorMessage' => $debug ? $e->getMessage() : $this->uploadControl->translate('Server error'),
 			]));
 		}
 
 		$this->presenter->sendResponse(new JsonResponse([
 			'id' => $this->request->getPost('id'),
-			'error' => $file->getError(),
+			'error' => $this->uploadControl->getHideError() ? 0 : $file->getError(),
 		]));
 	}
 

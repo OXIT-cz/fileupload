@@ -7,7 +7,8 @@ use Nette\Localization\ITranslator;
 use Nette\SmartObject;
 use Nette\Utils\Html;
 use Tracy\Debugger;
-use Zet\FileUpload\Model\UploadController;
+use Zet\FileUpload\Controller\IUploadController;
+use Zet\FileUpload\Controller\UploadController;
 use Zet\FileUpload\Template\Renderer\BaseRenderer;
 
 /**
@@ -15,7 +16,7 @@ use Zet\FileUpload\Template\Renderer\BaseRenderer;
  *
  * @author  Zechy <email@zechy.cz>
  */
-class JavascriptBuilder
+class JavascriptBuilder implements IJavascriptBuilder
 {
 
 	use SmartObject;
@@ -31,26 +32,35 @@ class JavascriptBuilder
 	private $renderer;
 
 	/**
-	 * @var UploadController
+	 * @var UploadController;
 	 */
 	private $controller;
+
+	public $templateFile = __DIR__ . "/js.latte";
 
 	/**
 	 * JavascriptBuilder constructor.
 	 *
 	 * @param BaseRenderer     $renderer
-	 * @param UploadController $controller
+	 * @param IUploadController $controller
 	 */
 	public function __construct(
 		BaseRenderer $renderer,
-		UploadController $controller
+		IUploadController $controller
 	)
 	{
 		$this->renderer = $renderer;
 		$this->controller = $controller;
 
 		$this->template = $controller->template;
-		$this->template->setFile(__DIR__ . "/js.latte");
+		$this->setTemplateFile();
+	}
+
+	public function setTemplateFile(?string $filePath = null): self
+	{
+		$this->template->setFile($filePath ?: $this->templateFile);
+
+		return $this;
 	}
 
 	public function getJsTemplate(): string
@@ -58,7 +68,7 @@ class JavascriptBuilder
 		return $this->buildTemplate();
 	}
 
-	private function buildTemplate(): string
+	public function buildTemplate(): string
 	{
 		$this->setSettings();
 		$this->setRendererSettings();

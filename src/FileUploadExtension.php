@@ -114,7 +114,8 @@ final class FileUploadExtension extends CompilerExtension
 				'stopped' => Expect::string('File upload interrupted.'),
 			]),
 			'uploadSettings' => Expect::array(),
-			'debug' => Expect::bool(false)
+			'debug' => Expect::bool(false),
+			'hideError' => Expect::bool(false),
 		]);
 	}
 
@@ -124,7 +125,7 @@ final class FileUploadExtension extends CompilerExtension
 
 		$init->addBody('\Zet\FileUpload\FileUploadControl::register($this->getService(?), ?);', [
 			$this->getContainerBuilder()->getByType(Container::class),
-		$this->getConfig(),
+			$this->getConfig(),
 		]);
 	}
 

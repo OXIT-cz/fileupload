@@ -193,7 +193,7 @@ class UploadController extends Control implements IUploadController
 
 		$this->presenter->sendResponse(new JsonResponse([
 			'id' => $this->request->getPost('id'),
-			'error' => 0,
+			'error' => $this->uploadControl->getHideError() ? 0 : $file->getError(),
 		]));
 	}
 

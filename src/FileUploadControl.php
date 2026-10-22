@@ -19,6 +19,7 @@ use Zet\FileUpload\Model\BaseUploadModel;
 use Zet\FileUpload\Model\DefaultFile;
 use Zet\FileUpload\Model\IUploadModel;
 use Zet\FileUpload\Template\IJavascriptBuilder;
+use Zet\FileUpload\Template\JavascriptBuilder;
 
 /**
  * Class FileUploadControl
@@ -58,7 +59,10 @@ class FileUploadControl extends UploadControl
 	private $cache;
 
 	/** @var bool */
-	private $debug;
+	private $debug = false;
+
+	/** @var bool */
+	private $hideError = false;
 
 	/** @var int */
 	private $maxFiles;
@@ -75,8 +79,8 @@ class FileUploadControl extends UploadControl
 	/** @var IUploadController|null */
 	private $uploadController;
 
-	/** @var class-string<IJavascriptBuilder>|null */
-	private $javascriptBuilder;
+	/** @var class-string<IJavascriptBuilder> */
+	private $javascriptBuilder = JavascriptBuilder::class;
 
 	/** @var class-string<IUploadModel>|null */
 	private $uploadModel;
@@ -197,6 +201,7 @@ class FileUploadControl extends UploadControl
 			$component->setFileFilter($configuration['fileFilter']);
 			$component->setRenderer($configuration['renderer']);
 			$component->setDebug($configuration['debug']);
+			$component->setHideError($configuration['hideError']);
 
 			if ($configuration['translator'] === null) {
 				$translator = $systemContainer->getByType(Translator::class, false);
@@ -302,6 +307,18 @@ class FileUploadControl extends UploadControl
 	public function getDebug(): bool
 	{
 		return $this->debug;
+	}
+
+	public function setHideError(bool $hideError): self
+	{
+		$this->hideError = $hideError;
+
+		return $this;
+	}
+
+	public function getHideError(): bool
+	{
+		return $this->hideError;
 	}
 
 	/**
@@ -550,31 +567,20 @@ class FileUploadControl extends UploadControl
 		return $this;
 	}
 
-	/**
-	 * todo: wiring?
-	 */
-	public function getUploadController()
+	public function getUploadController(): IUploadController
 	{
-		if(is_null($this->uploadControllerClass)) {
-			$defaultController = new UploadController($this);
-			$this->monitorController($defaultController);
+		if ($this->uploadController === null) {
+			$class = $this->uploadControllerClass ?? UploadController::class;
+			$controller = new $class($this);
 
-			return $defaultController; //monitor
-		}
-
-		if(!$this->uploadController) {
-			$controller = $this->uploadControllerClass;
-			$controller = new $controller($this);
-
-			if($controller instanceof IUploadController) {
-				$this->uploadController = new $controller($this);
-
-				$this->monitorController($this->uploadController);
-			} else {
+			if (!($controller instanceof IUploadController)) {
 				throw new InvalidStateException(
 					'The passed controller is not an instance of \\Zet\\FileUpload\\Controller\\IUploadController.'
 				);
 			}
+
+			$this->uploadController = $controller;
+			$this->monitorController($controller);
 		}
 
 		return $this->uploadController;
@@ -583,10 +589,7 @@ class FileUploadControl extends UploadControl
 	protected function monitorController(IUploadController $controller)
 	{
 		$this->monitor(Form::class, function (Form $form) use ($controller): void {
-//			if($form->components) {
-//				$form->removeComponent($controller);
-				$form->addComponent($controller, 'uploadController' . ucfirst($this->name));
-//			}
+			$form->addComponent($controller, 'uploadController' . ucfirst($this->name));
 		});
 	}
 
